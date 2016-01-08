@@ -2,16 +2,6 @@
 
 不会逐字逐句翻译，但是会尽量记录关键的概念和要点，以便深入理解。具体的名词我就只在标题中翻译，不然一是容易弄混，二是难以保持一致。
 
-<!-- MarkdownTOC -->
-
-- 第一章 视图 Views
-    - The Window
-- Drawing
-- Layers
-- Animation
-- Touches
-
-<!-- /MarkdownTOC -->
 
 
 # 第一章 视图 Views
@@ -703,15 +693,15 @@ layer 的动画是默认开启的，但是不会在 view 的 underlying layer �
 
 ![pios50](_resources/pios50.jpg)
 
-## Media Timing Functions
+## _resources Timing Functions
 
-`CAMediaTimingFunction`，用来控制动画曲线
+`CA_resourcesTimingFunction`，用来控制动画曲线
 
-+ `kCAMediaTimingFunctionLinear`
-+ `kCAMediaTimingFunctionEaseIn`
-+ `kCAMediaTimingFunctionEaseOut`
-+ `kCAMediaTimingFunctionEaseInEaseOut`
-+ `kCAMediaTimingFunctionDefault`
++ `kCA_resourcesTimingFunctionLinear`
++ `kCA_resourcesTimingFunctionEaseIn`
++ `kCA_resourcesTimingFunctionEaseOut`
++ `kCA_resourcesTimingFunctionEaseInEaseOut`
++ `kCA_resourcesTimingFunctionDefault`
 
 不同定制的效果类似下图
 
@@ -726,7 +716,7 @@ layer 的动画是默认开启的，但是不会在 view 的 underlying layer �
 是 iOS 动画技术的基础。
 
 + Core Animation 可以在 view 的 underlying layer 上工作，所以是 the only way to apply full-on layer property animation to a view
-+ Permits fine control over the intermediate values and timing of an animation
++ Permits fine control over the inter_resourceste values and timing of an animation
 + Allows animations to be grouped into complex combinations
 
 
@@ -943,23 +933,23 @@ root view controller 主要负责两个重要的决定：
 
 举个例子，在下图中，我们可以看到两个界面元素
 
-![pios62](_resources/pios62.jpg)
+![pios62](/images/pios62.jpg)
 
 + 导航栏，包含 logo
 + 故事列表，是一个 `UITableView`
 
-![pios63](_resources/pios63.jpg)
+![pios63](/images/pios63.jpg)
 
 + 这个 app 的 root view controller 是 `UINavigationController`，`UINavigationController` 的 view 是这个 window 唯一的直接 subview，也就是 root view。导航栏是 root view 的 subview。
 + `UINavigationController` 包含第二个 `UIViewController`，是一个父子关系。这个子 controller 的 view 占据了屏幕的剩余部分，就是一个 `UITableView`。当用户点击这个 tableview 时，会有另一个 `UIViewController` 来取代这个 `UITableView`，但是导航栏会还在原地
 
 这个例子中所有的都是 automatic 的，所以再举一个例子包含 manual 的部分
 
-![pios64](_resources/pios64.jpg)
+![pios64](/images/pios64.jpg)
 
 这是一个显示拉丁单词信息的 app，然后下面有一个工具栏，具体的 view hierarchy 如下
 
-![pios65](_resources/pios65.jpg)
+![pios65](/images/pios65.jpg)
 
 因为有很多拉丁单词，所以这里用 `UIPageViewController` 来进行展示，但是工具栏本身不应该在 `UIPageViewController` 的 view 中，所以
 
@@ -969,13 +959,13 @@ root view controller 主要负责两个重要的决定：
 
 这个 app 还有另一个模式，就是随机抽取并展示单词，虽然界面很像但是行为是完全不一样的
 
-![pios66](_resources/pios66.jpg)
+![pios66](/images/pios66.jpg)
 
 为了实现这个，我创建了另一个 `UIViewController` 的子类，叫做 `DrillViewController`，不同的是，这个 view controller 是被 `RootViewController` 给 present 的。
 
-![pios67](_resources/pios67.jpg)
+![pios67](/images/pios67.jpg)
 
-![pios68](_resources/pios68.jpg)
+![pios68](/images/pios68.jpg)
 
 ## View Controller Creation
 
@@ -994,6 +984,875 @@ let nav = UINavigationController(rootViewController: llc)
 
 ## How a View Controller Gets Its View
 
+当一个 view controller 刚被实例化的时候，它是没有 view 的。View controller 是一个小且轻量的对象；View 因为包括了界面元素，会占据内存，是相对重的对象。因此，一个 view controller 会把获得 view 的时间尽量推迟，也就是在访问其 `view` 属性的时候，才 lazy initialize 之。
+
+在处理一个新的 view controller 时，如果不需要用到 `view` 属性，就尽量不要引用，这样就避免触发创建一个新的 view。如何在不加载 view 的前提下知道一个 view controller 有没有对应的 view 呢？调用 `isViewLoaded` 方法。在 iOS 9 中，可以在不引用 view 的同时对 view 进行一些操作，使用 `viewIfLoaded`。我们可以使用 `loadViewIfNeeded` 显式加载 view，而不是把加载 view 作为其他操作的 side effect。
+
+一旦一个 view controller 有了其对应的 view，`viewDidLoad` 方法就会被调用，这个方法是在代码中修改 view 的内容的最佳时机，比如说添加 subview，调整界面元素等等。
+
+在 `viewDidLoad` 被调用之前，view controller 必须获取它的 view。如果你想要对 view 做一些自定义操作的话，就必须理解 view controller 是怎么获得 view 的。
+
+整个过程不难，但是很精妙，因为有多种可能，例如
+
++ View 可能由 view controller 中的代码手动创建
++ View 可能自动被创建为一个空的通用的 view
++ View 可能在其独立的 nib 文件创建
++ View 可能由其 view controller 的 nib 文件创建
+
+### Manual View
+
+要手动提供 view 的话，需要实现 `loadView` 方法，创建一个 `UIView` 的实例，然后赋值给 `self.view`。在这里一定不能调用 `super`
+
+![pios69](_resources/pios69.jpg)
+
+举个例子，如果我们完全在代码中对视图进行初始化，需要这么做：
+
+1. 需要一个 `UIViewController` 的子类，创建一个 Cocoa Touch Class
+2. 命名为 `RootViewController`，父类是 `UIViewController`，取消勾选创建 xib 文件
+3. 保存文件
+
+在 `RootViewController.swift` 中，我们需要实现 `loadView`，并且加一些东西显示上去：
+
+![pios70](_resources/pios70.jpg)
+
+这个时候我们还没有把 RootViewController 添加到 view hierarchy 中（事实上我们还没有 view hierarchy），所以在 `AppDelegate.swift` 中修改 `application:didFinishLaunchingWithOptions:`，创建一个 RootViewController 实例并且设置为 window 的 `rootViewController`:
+
+![pios71](_resources/pios71.jpg)
+
+运行 app 就可以看到对应的结果了。
+
+我们创建 view controller 的 view 时，没有给定 frame，因为这个事情由其他人做了，在这里是由 window 完成，因为 window 将把这个 view 作为其 subview。要注意 view controller 的 view 的尺寸可能会变。
+
+### Generic Automatic View
+
+上个例子有一个不好地方是，创建 view 和配置 view 放在了一起，理论上来说，最好把配置的过程放在 `viewDidLoad` 中，如下所示
+
+![pios72](_resources/pios72.jpg)
+
+如果我们这么写代码的话，其实连 `loadView` 方法都不需要自己重写。如果没有手动提供 view 的话， `UIViewController` 的默认实现是会自动生成一个通用的 `UIView` 的（其实就跟 `loadView` 方法中做的事情一样）。如果我们不想要默认的 `UIView` 而是我们自定的 `UIView` 子类的话，就需要在 `loadView` 方法中手动创建。
+
+### View in a Separate Nib
+
+也可以通过 nib 文件来创建 view，这样的好处是可以可视化进行编辑。
+
+载入 nib 文件时，view controller 已经被创建，会成为 nib 的所有者。nib 载入的时候，view controller 通过 nib-loading 机制来获取它的 view。
+
+我们先从 `.xib` 文件弄起，之后再用 storyboard（这样有助于理解）
+
+在 `.xib` 文件中，nib 的所有者由 File's Owner 代理对象表示。因此，需要进行如下两个设置：
+
++ File's Owner 类必须设置为 `UIViewController` 的子类
++ File's Owner 代理现在有一个 outlet，对应于 `UIViewController` 的 `view` 属性。这个 outlet 必须与 view 连接
+
+先删除 `loadView` 和 `viewDidLoad` 中的代码，因为这次我们要在 nib 文件中创建，然后进行如下步骤：
+
+1. 选择 File -> New -> File and specify iOS -> User Interface -> View. 这是一个包含 `UIView` 对象的 nib 文件。点击下一步
+2. 重命名为 `MyNib.xib`，放到合适的地方，点击创建
+3. 编辑 `MyNib.xib`
+	+ 把 File's Owner 类设置为 `RootViewController`
+	+ 把 File's Owner 的 `view` 的 outlet 连接到这个 view 对象 
+4. 用编辑器对 view 做一些修改
+
+接下来就是载入 nib 文件了，回到 `AppDelegate.swift` 中，在我们创建 `RootViewController` 实例的方法中把原来的：
+
+```swift
+let theRVC = RootViewController()
+self.window!.rootViewController = the RVC
+```
+
+替换成
+
+```swift
+let the RVC = RootViewController(nibName:"MyNib", bundle:nil)
+self.window!.rootViewController = the RVC
+```
+
+给 bundle 赋值为 nil 等于是指定 main bundle，通常来说这样就可以。
+
+还有一个技巧，默认的 init 函数在初始化的时候会查找同名的 nib，并进行载入，所以我们可以把 `MyNib.xib` 名字改为 `RootViewController.xib` 然后用下面的代码就可以自动载入对应的 nib
+
+```swift
+let the RVC = RootViewController()
+self.window!.rootViewController = the RVC
+```
+
+这又带来了一个问题，nib 并不是一个 controller，但是名字里却有 controller，所以可以把名字改为 `RootView.xib`，运行之后可以发现仍然是能够正确载入的。
+
+如果在之前创建 `UIViewController` 的子类的时候勾选了创建对应的 xib 文件，那么会自动生成并且连接好需要连接的东西。
+
+另外，如果命名为 `RootViewController~ipad.xib`，那么在用 ipad 打开时，会自动读取这个文件，是一个很方便的做法。
+
+现在我们可以总结一下 view controller 如何获得一个 view：
+
+1. 当 view controller 第一次需要使用 view 时，会调用 `loadView`
+2. 如果重写了 `loadView`，就可以在代码中创建 `view`，不要调用 `super`。如果这样么做的话，创建完成
+3. 如果没有重写 `loadView`，就会使用默认的实现，也就是载入 view controller 相关联的 nib。这也就是为什么我们重写 `loadView` 时不能调用 super，调用的话就会既从代码创建，又从 nib 创建了
+4. 如果之前的步骤都没有成功，也就是既没有重写 `loadView` 也没有对应的 nib 文件，就会创建一个通用的 `UIView`
+
+![pios73](_resources/pios73.jpg)
+
+### Nib-Instantiated View Controller
+
+![pios74](_resources/pios74.jpg)
+
+我们同样可以从 nib 文件读取 view controller，举例如下：
+
+1. File -> New -> File and specify iOS -> User Interface -> Empty，点击下一步
+2. 命名为 `Main.xib`，保存到合适位置，点击下一步
+3. 编辑 `Main.xib`，拉一个 plain vanilla View Controller 对象到画布中
+4. 可以看到这个 view controller 中有一个 view 对象，选择并删除它（不要担心，之后会详细说明）
+
+然后在 `AppDelegate.swift` 用代码载入这个 view controller：
+
+```swift
+let arr = UINib(nibName: "Main", bundle: nil).instantiatedWithOwner(nil, options: nil)
+self.window!.rootViewController = arr[0] as? UIViewController
+```
+
+然后就可以对这个 view controller 进行操作了。
+
+我们同样也可以对 view controller 中的 view 指定另外的 nib 文件（Attributes inspector中），这个等于调用 `init(nibName:bundle:)`
+
+![pios75](_resources/pios75.jpg)
+
+### Storyboard-Instantiated View Controller
+
+Storyboard 等于是把之前的 nib 文件用可视化的形式展示了出来，实际上是一个 nib 文件的 bundle，每个 view 可以对应单独的 nib 文件，并且在需要的时候进行初始化。
+
+![pios76](_resources/pios76.jpg)
+
+Xcode 的 app 模板有一个 `Main.storyboard`，在 `Info.plist` 的 `UIMainStoryboardFile` 中指定。当应用启动时，`UIApplicationMain` 通过调用 `UIStoryboard` 的构造器 `init(name:bundle:)` 来实例化最初的 view controller（`instantiatedInitialiViewController`）并且指定为 `rootViewController`。
+
+添加 segue 之后，在跳转的时候会自动初始化目标 view controller。
+
+在 Xcode 7 中，对于对于多个 storyboard 的调用方便很多，可以根据功能和分工来使用多个 storyboard 并在主 storyboard 中进行引用，方便团队协作。
+
+有了一个 storyboard 实例后，view controller 可以通过以下四种方式之一来进行实例化：
+
++ 至多一个 view controller 可以被设置为最开始的 view controller，调用 `instantiateInitialViewController` 会返回这个实例
++ 一个 view controller 可以有一个字符串标识符，叫做 storyboard id（Identity inspector 中），也可以调用 `instantiateViewControllerWithIdentifier:`，会返回这个实例
++ 父类被实例化时，子类也会自动被实例化，比如 `UINavigationController`
++ 如果是 segue 的目标 view controller，会在触发是进行实例化
+
+## View Resizing
+
+一般在 view controller 中进行 view 的尺寸的对应调整。
+
+在 Nib 编辑器中编辑都是给定的尺寸，如果不做调整，在不同设备会有不同的效果。
+
+### Bars and Underlapping
+
+通常来说，界面上还有有其他一些元素，需要在设计时进行考虑：
+
++ root view 会被放置在状态栏的下面，状态栏是透明的
++ root view 会被放在诸如导航栏、工具栏、tab bar 的下面，注意不要被这些元素遮挡
+
+这些界面元素可能出现，也就是说高度随时可能改变，这里主要使用 view controller 的 layout guides（`topLayoutGuide` 和 `bottomLayoutGuide`）
+
+最方便的做法就是结合 autolayout 和 constrains，iOS 9 中有一些新的属性：
+
++ topLayoutGuide 的 `bottomAnchor`
++ bottomLayoutGuide 的 `topAnchor` 
+
+如果需要进行布局计算，可以通过 main view 的 `length` 属性，注意，在 `viewDidLoad` 中这个属性不可用，最早可以使用是在 `viewWillLayoutSubviews` 方法中，在 iOS 9，可以使用 `heightAnchor` 属性
+
+**状态栏可见性**
+
+可以通过重写下面方法来进行定制
+
++ `preferredStatusBarStyle`
+	+ 可以选择 `UIStatusBarStyle` 的 `.Default` 或者 `.LightContent`，也就是深色文字和浅色文字，注意选择对比度高能看清的即可
++ `prefersStatusBarHidden`
+	+ 返回 true 则状态栏不可见，调用 super 则是默认的设置
++ `childViewControllerForStatusBarStyle`
++ `chileViewControllerForStatusBarHidden`
+	+ 用 delegate 来改动 child view 的状态栏
+	+ 例如 tab view controller 中根据不同的 tab 来进行改动
+
+这些方法都不需要自己去调用，如果想要改动立即生效，在 view controller 调用 `setNeedsStatusBarApplearanceUpdate`，如果这个是在 animation block 中调用的话，还可以设定动画方式 `preferredStatusBarUpdateAnimation`，可选的值有 `.Fade`, `.Slide`, `.None`
+
+改动可见性会使得高度有 20 points 的变化，这也是会让界面忽然出现改变，不想这样的话，在同一个 animation block 中调用 `layoutIfNeeded` 方法，这样就会有比较自然的动画效果：
+
+![pios77](_resources/pios77.jpg)
+
+如果你的 view controller 的上一级是 navigation controller 或者 tab bar controller，可以通过一些属性来知道 top bar 和 bottom bar 的状态
+
++ `edgesForExtendedLayout`
+	+ `UIRectEdge`，模式是 `.All`，表示当前 view controller 会在半透明的top bar 或者半透明的 bottom bar 之下，其他的选择有 `.None` 表示不会在 top/bottom bar 之下以；`.Top`，表示只在 top bar 之下；`.Bottom`，表示只在 bottom bar 之下
++ `extendedLayoutIncludesOpaqueBars`
+	+ 如果是 ture，即使 top/bottom bar 是不透明的也会应用上面设置的规则
+
+### Resizing Events
+
+下面这些方法主要跟旋转有关，以及 iOS 9 中新增的 iPad 多任务处理有关
+
++ `willTransitionToTraitCollection:withTransitionCoordinator:`
+	+ 当 app 要产生 trait collection 变化的时候（size classes 将要改变）
+	+ 在启动时或者 view controller 的 view 第一次被嵌入到界面中时不会调用
+	+ 如果重写这个方法，记得调用 `super`
+	+ `UIViewController` 通过 `UIContentContainer` 协议以接收这个事件
++ `viewWillTransitionToSize:withTransitionCoordinator:`
+	+ 新的尺寸是第一个参数，旧的尺寸仍旧可用 `self.view.bounds.size`
+	+ 在启动时或者 view controller 的 view 第一次被嵌入到界面中时不会调用
+	+ 如果重写这个方法，记得调用 `super`
+	+ `UIViewController` 通过 `UIContentContainer` 协议以接收这个事件
++ `traitCollectionDidChange:`
+	+ 在 trait collection 改变之后发送。参数是老的 trait collection，新的 trait collection `self.traitCollection`
+	+ 在启动时或者 view controller 的 view 第一次被嵌入到界面中时会调用，并且参数为 nil
+	+ `UIViewController` 通过 `UITraitEnvironment` 协议以接收这个事件
+
+`UIViewController` 还回收到它的 view 的一些事件：
+
++ `updateViewConstraints`
+	+ 要更新 constraints
+	+ 启动时会被调用
+	+ 如果重写，记得调用 `super`
++ `viewWillLayoutSubviews`
++ `viewDidLayoutSubviews`
+	+ 在 view 接收 `layoutSubview` 方法之前之后发送
+	+ 启动时会被调用
+
+这些事件发送的顺序是：
+
++ `willTransitionToTraitCollection:withTransitionCoordinator:`
++ `viewWillTransitionToSize:withTransitionCoordinator:`
++ `updateViewConstraints`
++ `traitCollectionDidChange:`
++ `viewWillLayoutSubviews`
++ `viewDidLayoutSubviews`
+
+不能保证每个方法都只会发送一次
+
+![pios78](_resources/pios78.jpg)
+
+
+### Rotation
+
+iOS 7 及之前，旋转都是一个幻觉，实际上是 window 没有变化。iOS 8 及之后才算是真正的『旋转』。旋转的过程如下：
+
++ 状态栏方向改变
+	+ 目前的方向可以通过 `UIApplication` 的 `statusBarOrientation` 获取
+	+ `UIInterfaceOrientation` 的可能值有
+		+ `.Portrait`
+		+ `.PortraitUpsideDown`
+		+ `.LandscapeLeft`
+		+ `.landscapeRight`
+	+ 两个便捷方法 `UIInterfaceOrientationIsLandscae` 和 `UIInterfaceOrientationIsPortrait` 接收一个 `UIInterfaceOrientation` 并返回一个布尔值
++ view controller 的 view 的尺寸改变
+	+ 通常通过 `viewWillTransitionToSize:withTransitionCoordinator:` 来了解方向的改变
+	+ 对于 iPhone 来说主要专注 90 度旋转，那么主要是 `willTransitionToTraitCollection:withTransitionCoordinator:`
+
+有两个旋转的互补使用方法：
+
++ Compensatory rotation
++ Forced rotation
+
+这里主要是用于处理 90 度旋转的情况，因为可能需要做一定的界面改动
+
+**Permitting compensatory rotation**
+
+默认来说，对于 iPhone 支持除了 Upsidedown 的其他三种方式，iPad 则是全部支持。如果需要做一些改动，有以下三种改动的层级：
+
++ 应用本身
+	+ 在 `Info.plist` 的 `UISupportedInterfaceOrientations` 设置
+	+ 在 app target 的 general bar 中设置
++ 在 App Delegate 中
+	+ 这个设置会覆盖 `Info.plist` 的设置，也就是说可以动态修改, bitmask
+	+ `application:supportedInterfaceOrientationForWindow:` 会在每次设备旋转是至少调用一次
++ 最顶层的 view controller，也就是 root view controller 或者某个全屏 view controller
+	+ 实现 `supportedInterfaceOrientations`, bitmask
+	+ 也可以实现 `shouldAutorotate`
+
+![pios79](_resources/pios79.jpg)
+
+上面哥提到的 bitmask 是 `UIinterfaceOrientationMask`，可以是下面的一个或者多个组合
+
++ `.Portrait`
++ `.LandscapeLeft`
++ `.LandscapeRight`
++ `.ProtraitUpsideDown`
++ `.Landscape` (Left 和 Right 的组合)
++ `.All` 四种
++ `.AllButUpsideDown` 三种
+
+例如：
+
+```swift
+override func supportedInterfaceOrientations() -> UIInterfaceOrientationMask {
+	return .Portrait
+}
+```
+
+想要知道当前的方向
+
+```swift
+let orientation = UIDevice.currentDevice().orientation
+```
+
+可能的返回值有：`.Unknown`, `.Portrait` 以及其他的选项。全局便捷方法 `UIDeviceOrientationIsPortrait` 和 `UIDeviceOrientationIsLandscape` 接收一个 `UIDeviceOrientation` 变量并返回一个布尔值。
+
+当你接收到一个旋转相关的事件时，设备的方向已经改变了
+
+![pios80](_resources/pios80.jpg)
+
+**Initial orientation**
+
+在 iPad 上没有特定的初始化方向，理论上来说会以当前设备最可能随处的方向来启动。
+
+在 iPhone 上，以 iOS 9 来说，如果在 `Info.plist` 中方向设为`UIInterfaceOrientationPortrait`，初始方向就是竖直。用户启动 app 时会先以竖直显示然后切换到水平。
+
+如果没有指定竖直，那么就会直接以水平显示，具体的顺序可以自己安排。
+
+如果指定了竖直，但是 root view controller 不支持竖直，那么 app 会在具体布局之前先以竖直载入然后旋转到水平。
+
+**Initial layout** 
+
+如果你有一些设置初始布局的代码，要放到哪里呢？虽然具体的顺序跟设备当前的方向有关，但是以下是肯定的：
+
++ `viewDidLoad`
+	+ 通常在这里操作，因为方便，会尽可能早只调用一次
+	+ 虽然 view 已经载入，但是并没有被插入到界面中，所以还没有对应的尺寸
+	+ 如果不依赖与具体的尺寸（比如说 autolayout），那么可以在这里操作
++ `traitCollectionDidChange`
++ `viewWillLayoutSubviews`
+
+如果想要在屏幕中央插入一个小黑方块，下面代码是错误的：
+
+![pios81](_resources/pios81.jpg)
+
+因为这时候 `self.view` 可能还没有对应的尺寸，如果加入 autoresizing 可能会好一些：
+
+![pios82](_resources/pios82.jpg)
+
+当然如果用 autolayout 是最好的
+
+![pios83](_resources/pios83.jpg)
+
+即使 view 的尺寸会变化，但是我们添加的 constraints 会保证小黑方块出现在我们想要的位置。
+
+如果我们打算在 `traitCollectionDidChange` 或者 `viewWillLayoutSubviews` 进行设置，需要处理的问题是这两个方法可能会被调用不止一次，解决方法是设定一个布尔值用作开关：
+
+![pios84](_resources/pios84.jpg)
+
+**Responding to rotation**
+
+切换方向是不但可能需要改变尺寸，可能还需要增加或者删除一些 view。我们可以利用 autolayout 来实现（通过设定不同的 trait collection）
+
+## Presented View Controller
+
+原来叫做 modal view controller，是用一个完整界面取代另一个的最简单方式（但是原来的 view 还在，只是这个 view 跳出来覆盖了而已，只有当当前 view 消失后，原本的 view 才出现）
+
+![pios85](_resources/pios85.jpg)
+
+现在 presented view controller 有了更多的可能：（这两个都是原先在 iPad 上，后来 iPhone 也可以使用的特性）
+
++ 可以只取代界面中的一个 subview
++ 可以只部分覆盖当前的界面，当前的界面不会被移除
+
+### Presenting a View
+
+最重要的让 view 出现和消失的两个方法是：
+
++ `presentViewController:animated:completion:`
++ `dismissViewControllerAnimated:completion:`
+
+可以在这里设置动画已经切换完成后需要指定的代码。
+
+presenting view controller（就是被要出现的 presented view 遮挡住的 view 的 controller）不一定是那个你需要发送 `presentViewController:animated:completion:` 的 controller。
+
+我们先来看看 view controller 在 presenting 一个 view controller 时可能的三个角色：
+
++ Presented view controller
+	+ 指定的第一个参数
++ Original presenter
+	+ 接收 `presentViewController:animated:completion:` 方法的 view controller，也叫做 source
++ Presenting view controller
+	+ 被遮住的那个 view 的 controller
+
+这三个对象任何一个都可以接收 `dismissViewControllerAnimated:completion:` 方法，runtime 会找到对应的 `presentingViewController`。
+
+一个 view controller 至多可以有一个 `presentedViewController`。如果你对一个 `presentedViewController` 不为 nil 的 view controller 发送 `presentViewController:animated:completion:`，什么事情都不会发生，completion 中的代码也不会执行。
+
+但是一个 presented view controller 本身也可以 present 一个 view controller，所以这就可以弄出一个链条了。
+
+如果你对一个 `presentedViewController` 为 nil 的 view controller 发送 `dismissViewControllerAnimated:completion:`，什么事情都不会发生，completion 中的代码也不会执行。
+
+我们可以在 storyboard 中方便地完成连接，只要用 modal segue 连接两个 view controller 即可，这里我们不用这个方式，因为 modal segue 会自动调用 `presentViewController:animated:completion:`，我们来试试看自己调用。
+
+我们先创建一个 Single View Application（通过模板），然后我们加第二个 view controller 进去：
+
+1. File -> New -> File and specify iOS -> Source -> Cocoa Touch Class。点击下一步
+2. 命名为 `SecondViewController`，确定是 `UIViewController` 的子类，勾选 xib 的框（这样我们可以在 nib 中设计界面，当然也可以用 storyboard，但是这里是要学东西，所以就不用 storyboard 自动处理）。点击下一步
+3. 确保放在了合适的位置。点击创建
+4. 编辑 `SecondViewController.xib`，随便加点什么东西让它和之前的不一样
+5. 现在需要一个方式来激活这个 view，在第一个 view 中加一个按钮，连接一个叫 `doPresent` 的 aciton 到 `ViewController.swift` 中（这个就是模板自己生成的）
+6. `doPresent` 的代码如下：
+
+```swift
+@IBAction func doPresent(sender:AnyObject?) {
+	let svc = SecondeViewController(nibName: "SecondeViewController", bundle: nil)
+	self.presentViewController(svc, animated:true, completion: nil)
+}
+```
+
+运行就可以发现一切正常，但是现在我们没有办法退回去，所以在 `SecondViewController.xib` 中加一个按钮，然后连接一个 action 到 `SecondViewController.swift` 中：
+
+```swift
+@IBAction func doDismiss(sender:AnyObject?){
+	self.presentingViewController!.dismissViewControllerAnimated(true, completion: nil)
+}
+```
+
+### Communication With a Presented View Controller
+
+从 original presenter 向 presented view controller 发消息比较简单，因为有一个指向它的引用，比方说 presented vew controller 有一个 `data` 属性，那么就可以这样传值：
+
+```swift
+IBAction func doPresent(sender:AnyObject?){
+	let svc = SecondView(nibName:"SecondViewController", bundle: nil)
+	svc.data = "This is very important data!"
+	self.presentViewController(svc, snimated: true, completion: nil)
+}
+```
+
+但是从 presented view controll 传值到 original presenter 就比较有趣，因为我们需要知道 originalpresenter 是什么，但是我们并没有指向它的引用。再进一步，presented view controller 需要知道由 original presenter 实现的某些方法的签名，这样它就可以调用并且传递信息。通常的做法是通过代理：
+
+1. presented view controller 定义一个协议，声明一个方法，这个方法会在其 dismiss 之前被调用
+2. original presenter 接收这个协议，并且实现对应的方法
+3. presented view controller 提供一个方法能够获取到实现对应方法的对象
+4. 这样当 original presenter 创建和配置 presented view controller 的时候也就把自己的引用通知给了它
+
+看起来很复杂，看一个例子就明白了。
+
+我们先修改 `SecondViewController.swift`:
+
+```swift
+protocol SecondViewControllerDelegate : class {
+	func acceptData(data: AnyObject!)
+}
+class SecondViewController : UIViewController {
+	var data : AnyObject?
+	weak var delegate : SecondViewControllerDelegate?
+	@IBAction func doDismiss(sender:AnyObject?){
+		self.delegate?.acceptData("Even more important data!")
+	}
+}
+```
+
+现在我们回到 `ViewController.swift`，要做的是声明 `SecondViewControllerDelegate` 然后把自己设置为 SecondViewController 的代理。当代理方法被调用时，ViewController 就能接收到数据，之后 dismiss SecondViewController:
+
+```swift
+class ViewController : UIViewController, SecondViewControllerDelegate {
+	@IBAction func doPresent(sender:AnyObject?){
+		let svc = SecondViewController(nibName: "SecondViewController", bundle: nil)
+		svc.data = "This is very important data!"
+		svc.delegate = self
+		self.presentViewController(svc, animated:true, completion:nil)
+	}
+	func acceptData(data:AnyObject!){
+		// do something with data here
+		self.dismissViewControllerAnimated(true, completion: nil)
+	}
+}
+```
+
+如果不想一切都让 ViewController 操心，而让 SecondViewController 自己负责消失，并且自动回传数据的话，可以利用 `viewWillDisappear` 来进行，代码改成这样：
+
+![pios86](_resources/pios86.jpg)
+
+如果是用 storyboard，那么又会有一点不一样，在 original presenter（segue 开始的那个 view controller）中实现 `prepareForSegue:sender:`，在这个方法中可以传递数据。dismiss 的时候用 presented view controller 自己的 `prepareForSegue:sender:` 方法来传递数据，这个后面会详细说。
+
+### Presented View Animation
+
+除了内置的一些简单动画，也可以自己提供动画效果。
+
+内置动画在 presented view controller 的 `modalTransitionStyle` 属性中设定，可选的有值有（`UIModalTransitionStyle`）:
+
++ `.CoverVertical` 默认
+	+ 从底向上滑出
++ `.FlipHorizontal`
+	+ 像一张纸的两面一样，这种情况下用户可以看到 window（一瞥），合理设置好背景颜色
++ `.CrossDissolve`
+	+ 渐显效果
++ `.PartialCurl`
+	+ 翻页一样的效果，但是第一个 view 还会保留在左上角
+
+![pios87](_resources/pios87.jpg)
+
+### Presentation Styles
+
+除了全屏覆盖，还有一些其他的内置选项，或者，也可以自己进行设置
+
+在 presented view controller 的 `modalPresentationStyle` 属性中设定，可选的有值有（`UIModalPresentationStyle`）:
+
++ `.FullScreen`
+	+ 默认，界面全部替换
++ `.OverFullScreen`
+	+ 和之前的类似，但是不会被替换，如果之后的界面有一定透明，可以看到之前的界面
++ `.PageSheet`
+	+ 在 iPad 和 iPhone 6/6s Plus 上会窄一点，后面的部分会变暗，在其他设备上和全屏一致
++ `.FormSheet`
+	+ 与`.PageSheet` 类似，更小更窄一些，在 iPad 和 iPhone 6/6s Plus 上会窄一点，后面的部分会变暗，在其他设备上和全屏一致
++ `.CurrentContext`
+	+ presenting view controller 可以是任何 view controller，比如 child view controller，presented view controller 只会取代这个子视图，也就是屏幕一部分的位置
++ `.OverCurrentContext`
+	+ 与 `.CurrentContext` 类似，但是不是取代，原来的还在，如果之后的界面有一定透明，可以看到之前的界面
+
+### Adapative Presentation
+
+在使用 `.PageSheet` 和 `.FormSheet` 的时候，有另外一个机会来指定 `modalPresentationStyle` 甚至连 view controller 都可以指定不一样的，这就叫做 adaptive presentation。
+
+### Rotation of a Presented View
+
+当 presented view controller 被展示的时候，就处于最顶层，那么 `supportedInterfaceOrientations` 同样是有效的，如果这个时候所支持的方向和设备目前的方向不一致，可以强行改变屏幕的方向（也是官方唯一准许的强制旋转的方式）
+
+重写 `preferredInterfaceOrientationForPresentation` 方法来指定初始方向：
+
+```swift
+override func preferredInterfaceOrientationForPresentation() -> UIInterfaceOrientation {
+	return .LandscapeLeft
+}
+```
+
+## Tab Bar Controller
+
+tab bar 是一个独立的界面对象，但是一般都和 tab bar controller 一起用（`UITabBarController`, `UIViewController` 的子类）。
+
+如果需要在不子类化 `UITabBarController` 的前提下控制方向，实现下面的方法：
+
++ `tabBarControllerSupportedInterfaceOrientations:`
++ `tabBarControllerPreferredInterfaceOrientationForPresentation:`
+
+关于状态栏，tab bar controller 实现了 `childViewControllerForStatusBarStyle` 和 `childViewControllerForStatusBarHidden` 方法，所以会根据当前正在显示的 child view controller 来决定状态栏
+
+### Tab Bar Items
+
+属于 `UITabBarItem`，继承自 `UIBarItem`（一个抽象类，提供一些重要属性如 `title`, `image`, `enabled`）
+
+有两种方法可以创建 tab bar item:
+
++ 用系统自带的：使用 `init(tabBarSystemItem:tag:)` 来实例化 child view controller 的 `tabBarItem`。注意，标题是不能改动的
++ 自己搞：使用 `init(title:image:tag:)` 来实例化 child view controller 的 `tabBarItem`，也可以自定点击的效果 `init(title:image:selectedImage:)`
+
+图片的尺寸是 30x30 PNG 格式，如果尺寸大会自动缩小，注意图片只用作 mask，所以颜色什么的都不会显示，唯一能改的是 `tintColor`，也可以给 tab bar item 一个角标。
+
+### Configuring a Tab Bar Controller
+
+基本的配置很简单，把 view controller 设为其 children 即可。把这些 view controllers 放到一个数组里然后把 `UITabBarController` 的 `viewControllers` 属性赋值为这个数组。数组里的每个 view controller 的 `parentViewController` 都是这个 tab bar controller。一个简单的例子：
+
+![pios88](_resources/pios88.jpg)
+
+显示的顺序和数组中 view controller 的顺序一致。在把这个数组赋值给 tab bar controller 的 `viewControllers` 属性时 `tabBarItem` 就已经就绪了。
+
+注意，调用 `viewDidLoad` 的时候还不能操作 `tabBarItem` 所以通常是在对应的 child view controller 中的初始化函数进行配置：
+
+```swift
+init() {
+	super.init(nibName:nil, bundle:nil)
+	// tab bar configuration
+	self.tabBarItem.image = UIImage(named: "game.png")
+	self.title = "Game"
+}
+```
+
+一开始会选择第一个 child view controller，可以通过 `selectedViewController` 或者 `selectedIndex` 来知道现在在第几个 tab 中。
+
+可以自定义 tab 切换时的动画。
+
+在 storyboard 中可以很方便的进行设置，也可以直接使用项目模板来进行创建
+
+## Navigation Controller
+
+类似与堆栈，`UINavigationItem`。导航栏是一个独立的界面对象，但是通常来说和 navagation controller 一起用。
+
+在堆栈 push 和 pop 的时候可以自定动画。
+
+也可以包含一个工具栏，参考 Mail 应用。
+
+关于旋转和状态栏的机制和 tab bar controller 很像，都是交由现在在展示的 view controller 
+
+### Bar Button Items
+
+有两种方式可以创建：
+
++ 基本的按钮
+	+ 类似于一个简单的按钮
++ 自定义 view
+
+`UIBarItem` 不是 `UIView` 的子类，一个简单的 bar 按钮没有 frame，也没有 `UIView` 的触摸处理。但是自定义 view 则是 `UIView`
+
+具体来看看三种创建方式
+
++ 用系统的：`init(barButtonSystemItem:target:action:)`
++ 创建简单 bar 按钮：`init(title:style:target:action:)` 或者 `init(image:style:target:action:)`
++ 自定义 view: `init(customeView:)`
+
+### Navigation Items and Toolbar Items
+
+虽然 navigation 的堆栈是自动维护的，但是对于每个 child view controller，还是需要自己配置如下的 `UINavigationItem` 属性
+
++ `title` / `titleView`
++ `prompt`：字符串
++ `rightBarButtonItem` / `rightBarButtonItems`
++ `backBarButtonItem`：可以隐藏，也可以进行自定义（换成图片什么的）
++ `leftBarButtonItem` / `leftBarButtonItems`
+
+### Configuring a Navigation Controller
+
+配置的过程实际上就是操作堆栈的过程，这个堆栈是一个叫 `viewControllers` 的数组属性，虽然实际上很少需要直接对其操作。
+
+最常见的操作方式就是 push 和 pop。初始化的时候一般用 `init(rootViewController:)`，例如
+
+```swift
+let fvc = FirstViewController()
+let nav = UINavigationController(rootViewController:fvc)
+```
+
+添加的时候就是 push
+
+```swift
+let svc = SecondViewController()
+self.navigationController!.pushViewController(svc, animated: true)
+```
+
+通常来说不需要担心返回的事情，会自动调用 `popViewControllerAnimated:`，当然也可以显式调用
+
+还有另一种方式可以 push 一个 vieww controller 到 navigation controller 的堆栈中，这个方法不要 navigation controller 的引用，使用 `showViewController:sender:`
+
+想要直接设置整个堆栈，用 `setViewControllers:animated:` 方法。想要删除位于中间的 view controller，直接操作堆栈是唯一的方法。
+
+在堆栈顶的叫做 `topViewController`，view 被显示的 view controller 叫做 `visibleViewController`。通常来说这两个属性的值是相同的，但是不要忘了之前的 presented view controller，这可能导致不一样。
+
+不同的 view controller 间传递数据和前面的 original presenter 和 presented view controller 相互间传递数据的机制是一样的，这里不再赘述。
+
+在 child view controller 中想要配置 `navigatoinItem` 的话最好不要在 `loadView` 或者 `viewDidLoad` 中进行，最好是重写 `init(nibName:bundle:)` 或者 `init(coder:)` 或者 `awakeFromNib`。
+
+可以通过 `navigationBar` 属性来访问导航栏，可以通过 `setNavigationBarHidden:animated:` 设置隐藏，下方的工具栏也可以通过 `setToolbarHidden:animated:` 来显示或隐藏。
+
+navigation controller 可以自动隐藏或显示导航栏和工具栏，通过一些属性进行配置
+
++ 点击时
+	+ `hidesBarsOnTap` 对应 navigation controller 的 `barHideOnTapGestureRecognizer`
++ 横扫时
+	+ `hidesBarsOnSwipe` 上滑隐藏，下滑显示，对应 navigation controller 的 `barHideOnSwipeGestureRecognizer`
++ 在水平时
+	+ `hidesBarsWhenVerticallyCompact`，如果开启了点击显示，这时点击会再次显示导航栏
++ 用户输入时
+	+ `hidesBarsWhenKeyboardAppears`，键盘显示的时候导航栏自动隐藏
+
+这些基本都可以在 Attributes inspector 中进行设置。
+
+可以利用 Master-Detail 模板来开始，或者自己手动嵌入 Navigation Controller
+
+## Custom Transition
+
+可以自定义大部分的动画，如：
+
++ tab 切换的效果
++ stack 的 push 和 pop 的效果
++ presented 和 dismiss 的效果
+
+具体的会单开一篇来介绍和演示，这里略过
+
+## Page View Controller
+
+`UIPageViewController` 可以通过手势来切换下一个或者上一个 child view controller
+
+### Preparing a Page View Controller
+
+使用 designated 构造器来初始化
+
+`init(transitionStyle:navigationOrientation:options:)`
+
+其中参数的含义是
+
++ `transitionStyle:` 决定动画效果 `UIPageViewControllerTransitionStyle`
+	+ `.PageCurl`
+	+ `.Scroll` 滚动
++ `navagationOrientation:` 决定方向 `UIPageViewControllerNavigationOrientation`
+	+ `.Horizontal`
+	+ `.Vertical`
++ `options:` 一个字典，根据不同的动画效果有不同的参数
+	+ `UIPageViewControllerOptionSpineLocationKey` 翻页效果，翻页位置
+		+ `.Min` (左或上)
+		+ `.Mid` (中间，会显示两页)
+		+ `.Max` (右或下)
+	+ `UIPageViewControllerOptionInterPageSpacingKey` 滚动效果，页面的间隔，默认是 0
+
+用下面的方法来指定 child view controllers
+
+`setViewControllers:direction:animated:completion:`
+
+下面是参数的含义
+
++ `viewControllers` 数组，每个元素是 1 个 view controller，用 `.Mid` 的话，每个元素是 2 个 view controller
++ 	`direction:`
+	+ `.Forward`
+	+ `.Backward` 
++ `animated:`, `completion:`
+	+ 布尔值和完成之后要执行的操
+
+还需要指定 `dataSource`，属于 `UIPageViewControllerDataSource` 协议，一个简单的例子：
+
+![pios89](_resources/pios89.jpg)
+
+### Page View Controller Navigation
+
+切换页面的时候，下面的数据源方法会被调用
+
++ `pageViewController:viewControllerAfterViewController:`
++ `pageViewController:viewControllerBeforeViewController:`
+	
+![pios90](_resources/pios90.jpg)
+
+**Page indicator**
+
+用滚动模式的话会自动有一个页面指示器，为此还需要多实现两个方法
+
+```swift
+func presentationCountForPageViewController(pageViewController: UIPageViewController) -> Int {
+	return self.pep.count
+}
+func presentationIndexForPageViewController(pvc: UIPageViewController) -> Int {
+	let page = pvc.viewControllers![0] as! Pep
+	let boy = page.boy
+	return self.pip.indexOf(boy)!
+}
+```
+
+通常来说还需要设置一下颜色，因为默认的颜色是白点透明背景，但是因为不能直接访问，所以用 proxy 来做
+
+```swift
+let proxy = UIPageControl.appearance()
+proxy.pageIndicatorTintColor = UIColor.redColor().colorWithAlphaComponent(0.6)
+proxy.currentPageIndicatorTintColor = UIColor.redColor()
+proxy.backgroundColor = UIColor.yellowColor()
+```
+
+**Navigation gestures**
+
+drap 和 tap 可以设定不同的行为，例如可以设定要点击两次才能翻页
+
+```swift
+for g in pvc.gestureRecognizers {
+	if let g = g as? UITapGestureRecognizer {
+		g.numberOfTapsRequired = 2
+	}
+}
+```
+
+在 storyboard 中可以设置大部分的内容，但是初始化 child view controllers 需要在代码中执行
+
+## Container View Controllers
+
+`UITabBarController`, `UINavigationController`, `UIPageViewController` 是内置的三种 parent view controllers，它们都有 child view controllers。如果我们想要自己也做一个类似的，要怎么做呢？
+
+使用 container view controller。
+
+### Adding and Removing Children
+
+包含一个 `childViewControllers` 数组，一个 child view controller 需要在某些时刻接收特定的事件：
+
++ 当它成为 child view controller 时
++ 当它的 view 被加入界面或者从界面中移除的时候
++ 当它不再是 child view controller 时
+
+具体的会单开一篇来介绍和演示，这里略过
+
+## Storyboards
+
+![pios91](_resources/pios91.jpg)
+
+
+基本的情况介绍主要就是拖动界面和设置对应的内容，以及 segue 相关的内容，还有 storyboard reference 的内容，比较基础，这里略过。
+
+### Unwind Segues
+
+segue 可以完成一半的工作，因为有 push segue 但是没有 pop segue；有 present modally segue 但是没有 dismiss segue。
+
+注意不能再多连一条相反方向的 segue，这样会创建一个新的 view controller 而不是返回到原来的。
+
+![pios92](_resources/pios92.jpg)
+
+这个时候就是用 unwind segue 的地方了。
+
+```swift
+@IBAction func unwind(seg:UIStoryboardSegue!){
+	// ...
+}
+```
+
+![pios93](_resources/pios93.jpg)
+
+## View Controller Lifetime Events
+
+可以通过重写这些方法，来在对的时间做对的事情：
+
++ `viewDidLoad`
+	+ 这时 view controller 已经得到了它的 view，但是 size 还没有设置好
++ `willTransistionToTraitCollection:withTransitionCoordinator:`
++ `viewWillTransitionToSize:withTransitionCoordinator:`
++ `traitCollectionDidChange:`
+	+ 前两个方法实现的时候需要调用 `super`，这是调整尺寸的地方
++ `updateViewConstraints`
++ `viewWillLayoutSubviews`
++ `viewDidLayoutSubviews`
+	+ 实现第一个方法的时候需要调用 `super`
++ `willMoveToParentViewController:`
++ `didMoveToParentViewController:`
+	+ 被作为 child view controller 添加或移除
++ `viewWillAppear:`
++ `viewDidAppear:`
++ `viewWillDisappear:`
++ `viewDidDisappear:`
+
+具体的顺序大概是这样（这里是一个 UIViewController 被 push 到 navigation controller 的堆栈中）：
+
++ `willMoveToParentViewController:`
++ `viewWillAppear:`
++ `updateViewConstraints`
++ `traitCollectionDidChange:`
++ `viewWillLayoutSubviews`
++ `viewDidLayoutSubviews`
++ `viewDidAppear:`
++ `didMoveToParentViewController:`
+
+当被 pop 走的时候，会收到这些消息：
+
++ `willMoveToParentViewController:` 参数为 nil
++ `viewWillDisappear:`
++ `updateViewConstraints`
++ `viewWillLayoutSubviews`
++ `viewDidLayoutSubviews`
++ `viewDidDisappear:`
++ `didMoveToParentViewController:` 参数为 nil
+
+注意具体调用的次数不是一定的，所以不要让代码依赖于『每个方法按顺序执行各一次』这个假定
+	
+## View Controller Memory Management
+
+一个避免使用太多内存的策略是，如果有资源暂时不用，就先释放掉。当内存过低时，view controller 会接收 `didReceiveMemoryWarning` 消息。
+
+一个比较好的方法是 lazy loading，也就是只有需要用的时候才载入。
+
+更底层的方法是把数据保存在磁盘中（例如 Cache 文件夹里）
+
+要测试低内存的情况，选择 Hardware -> Simulate Memory Warning。
+
+相当于调用以下方法（注意这个是隐藏 api，苹果不给用的）
+
+`UIApplication.shareApplication().performSelector("_performMemoryWarning")`
+
+## State Restoration
+
+这里简要介绍一下如何测试
+
+1. 正常启动应用
+2. 某个时刻点击 home 按键
+3. 回到 Xcode，点击 Stop
+4. 重新运行这个 app，看看有没有从上次结束的时候开始运行
+
+具体的会单开一篇来介绍和演示，这里略过
 
 
 
