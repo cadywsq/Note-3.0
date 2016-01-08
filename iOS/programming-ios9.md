@@ -1855,4 +1855,16 @@ segue 可以完成一半的工作，因为有 push segue 但是没有 pop segue�
 具体的会单开一篇来介绍和演示，这里略过
 
 
+# 第 7 章 滚动视图 Scroll Views
+
+`UIScrollView` 是这样一个 view，其内容比 bounds 要大，用户需要通过滚动和拖拽来查看所有内容，当然，我们也可以利用代码进行定位。
+
+通常来说，其 `clipsToBounds` 属性会被设置为 true，这样在 scroll view 中的部分是可见的，以外的是不可见的。
+
+scroll view 还支持以下功能：
+
++ 如何根据用户的手势来改变 bounds 的原点
++ 提供滚动指示器
++ 
+
 
