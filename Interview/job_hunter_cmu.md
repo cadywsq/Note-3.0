@@ -748,3 +748,5 @@ hard link 是直接指向 inode 的。所以 soft link 可以用于目录，但�
 最先面了Microsoft 和Yelp，由于实在没经验，都面了两轮就没消息了
 
 最后拿了Yammer, Zynga, Salesforce和Facebook的offer。Twitter没面完，懒得面了，应该会从FB~~
+
+
