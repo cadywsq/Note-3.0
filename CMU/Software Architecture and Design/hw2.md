@@ -2,6 +2,8 @@
 
 ## Homework-Week 2-1
 
+Please submit your technical background (e.g., major, technical strength in programming languages and techniques, short-term career goal). We will use this information to help balance the team formation if needed. 
+
 ## Homework-Week 2-2
 
 Revise your architectural design diagrams submitted in Homework 1, by applying architecture styles discussed in class this week.
