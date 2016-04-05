@@ -1,5 +1,43 @@
 # Team Project
 
+## 总体要求
+
+练习各种各样的 pattern
+
+作业围绕这个学期学习的五个主要方面：
+
++ Concepts of software architecture
++ design/reengineer various views of software architecture 
++ architectural styles (macro patterns)
++ design patterns (micro patterns)
++ ATAM to analyze existing architecture and make recommendations
+
+在一个实际的稍微大型一点的项目中来具体实践，最终制品是：
+
++ a revised ATAM document adding recommendations on design patterns (earlier you have had recommendations on architectural styles and various architectural view diagrams)
++ implemented recommended design patterns and architectural styles seamlessly integrated in the previous students' project.
+
+使用 Scrum，一共有 4 个 sprints，每次 1 到 2 周。具体的时间线为(Week 12 - Week 16)
+
++ Week 1 (Sprint 1: deadline: 4/8 Friday midnight)
+    + set up docker-supported project environment with previous students' projects;
+    + study existing design and code and recommend design patterns that should, could, or will be good to be implemented in this project.
+    + After Sprint 1, TAs will summarize all design patterns / architectural styles that must be implemented in the team projects and publish to Blackboard.
++ Week 2 (Sprint 2: deadline: 4/15 Friday midnight)
+    + Implement at least 4 recommended design patterns/architectural styles (one person one); demo to TAs (each group 1 hour)
++ Week 3 (Sprint 3: deadline: 4/22 Friday midnight)
+    + Implement at least 8 recommended design patterns/architectural styles (one person two); demo to TAs (eachgroup 1 hour)
++ Week 4 (Sprint 4: deadline: 4/29 Friday midnight)
+    + Implement all rest recommended design patterns/architectural styles;
+    + give final group presentation; (template will be published soon)
+    + demo to TAs (each group 1 hour)
+ 
+Final deliverables (deadline: 5/6 Friday midnight PDT)
+
++ revised final presentation ppt;
++ final project technical report; (template will be published soon)
+
+
 ## 1st Sprint 
 
 1. Form a group with 2 teams. Please state the group formation in the following [shared google doc file](https://docs.google.com/spreadsheets/d/1i7Tsn_QPZwvmmfWlbyfvKjP8_WpkdwcQmDDJuS7dmWs/edit#gid=0)
