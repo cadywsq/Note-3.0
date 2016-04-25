@@ -23,9 +23,9 @@
 
 ## 填坑
 
-+ CC Phase 2
 + A Pattern Language for Parallel Programming ver2.0
 + iOS9 C11 C12 C13 C14
 + David 发邮件
++ Spark 基本理解
 
 
